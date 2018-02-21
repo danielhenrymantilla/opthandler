@@ -145,6 +145,10 @@ __attribute__((noreturn)) void opthandler_usage (int exit_code)
     progname ? progname : "program",
     opthandler_argsname);
   fprintf(stderr, "Options:\n");
+  fprintf(stderr, " --%s %s\t\t   " "%s\n",
+    "help", "      ", "display this help");
+  fprintf(stderr, " -%c %s\t\t   " "%s\n",
+    'h', "    ", "display this help");
   for (size_t i = 0; i < options_count; ++i) {
     struct opthandler_option * option = &options[i];
     if (option->long_name)

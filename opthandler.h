@@ -3,6 +3,11 @@
 
 #include <stddef.h>
 
+union value {
+  char * string;
+  int flag;
+};
+
 struct opthandler_option {
   /* Short description that will be printed in usage. You may supply "" */
   char *		usage_description;
@@ -16,16 +21,22 @@ struct opthandler_option {
   /* Name of the option's argument (if any). NULL if no argument required */
   char *		arg_name;		/* e.g.	"filename" */
 
-  /* This is where the value is stored after parsing:		*
-   * -> for boolean-flag options (i.e. without argument),	*
-   * value.flag gets set to 1 if the option is supplied,	*
-   * -> for options with argument,				*
-   * value.string gets a copy (strdup) of the supplied argument */
-  union {
-    char * string;				/* default value: e.g. "-" */
-    int    flag;
-  }			value;
+  /*	This is where the value is stored after arg parsing	*
+   *                           					*
+   * + for boolean-flag options (i.e. arg_name == NULL),	*
+   *   \-> when the option is supplied, value.flag is set to 1	*
+   *   \-> you should initialise this with `arg_flag`,		*
+   *                           					*
+   * + for options with argument (i.e. arg_name != NULL),	*
+   *   \-> when the option is supplied,	value.string is set to 	*
+   * a copy (strdup) of the supplied argument			*
+   *   \-> you should initiliase this with `arg_default(...)`	*
+   *                           					*/
+  union value		value;			/* e.g. arg_default("-") */
 };
+
+#define arg_flag	((union value) {(int) 0})
+#define arg_default(x)	((union value) {(char *) (x)})
 
 /*
  * Main function, see example.c to see it in action.

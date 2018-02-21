@@ -10,11 +10,11 @@ enum {
 
 struct opthandler_option options[] = {
   [verbose] = {"enable verbose output",
-    'v', "verbose",	NULL,		{0}},
+    'v', "verbose",	NULL,		arg_flag},
   [outputfile] = {"set the output file",
-    'o', "output-file",	"filename",	{"-"}},
+    'o', "output-file",	"filename",	arg_default("-")},
   [no_colors] = {"disable colored output in console",
-    '\0', "no-colors",	NULL,		{0}},
+    '\0', "no-colors",	NULL,		arg_flag},
 };
 
 #define array_count(a) ( sizeof(a) / sizeof(*(a)) )

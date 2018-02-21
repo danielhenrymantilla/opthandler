@@ -135,32 +135,37 @@ void opthandler_free (void)
   }
 }
 
+static void display_option (char cn, char * ln, char * an, char * ud)
+{
+  char * buf = malloc(20 + (ln ? strlen(ln) : 0) + (an ? strlen(an) : 0));
+  if (!buf) perror("malloc");
+  size_t n = 0;
+  if (cn != '\0')
+    n += sprintf(buf + n, "  -%c", cn);
+  else
+    n += sprintf(buf + n, "    ");
+  n += sprintf(buf + n, "%c ", (cn != '\0' && ln) ? ',' : ' ');
+  if (ln)
+    n += sprintf(buf + n, "--%s%s", ln, an ? "=" : "");
+  n += sprintf(buf + n, "%s ", an ? an : "");
+  fprintf(stderr, "%-30s%s\n", buf, ud);
+  free(buf);
+}
+
 __attribute__((noreturn)) void opthandler_usage (int exit_code)
 {
   if (!options)
     print_fail("opthandler_usage error: opthandler not initialised.\n");
   if (exit_code == EXIT_SUCCESS)
-    fprintf(stderr, "%s\n", usage_intro_msg);
   fprintf(stderr, "\nUsage: %s [options] %s\n",
     progname ? progname : "program",
     opthandler_argsname);
-  fprintf(stderr, "Options:\n");
-  fprintf(stderr, " --%s %s\t\t   " "%s\n",
-    "help", "      ", "display this help");
-  fprintf(stderr, " -%c %s\t\t   " "%s\n",
-    'h', "    ", "display this help");
+  fprintf(stderr, "%s\n\n", usage_intro_msg);
+  display_option('h', "help", NULL, "display this help");
   for (size_t i = 0; i < options_count; ++i) {
     struct opthandler_option * option = &options[i];
-    if (option->long_name)
-      fprintf(stderr, " --%s %s\t   " "%s\n",
-        option->long_name,
-        option->arg_name ? option->arg_name : "      ",
-        option->usage_description);
-    if (option->char_name != '\0')
-      fprintf(stderr, " -%c %s\t\t   " "%s\n",
-        option->char_name,
-        option->arg_name ? option->arg_name : "    ",
-        option->usage_description);
+    display_option(option->char_name, option->long_name, option->arg_name,
+      option->usage_description);
   }
   fprintf(stderr, "\n");
   exit(exit_code);

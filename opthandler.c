@@ -148,14 +148,14 @@ __attribute__((noreturn)) void opthandler_usage (int exit_code)
   for (size_t i = 0; i < options_count; ++i) {
     struct opthandler_option * option = &options[i];
     if (option->long_name)
-      fprintf(stderr, " --%s\t%s\t%s\n",
+      fprintf(stderr, " --%s %s\t   " "%s\n",
         option->long_name,
-        option->arg_name ? option->arg_name : "\t",
+        option->arg_name ? option->arg_name : "      ",
         option->usage_description);
     if (option->char_name != '\0')
-      fprintf(stderr, " -%c\t\t%s\t%s\n",
+      fprintf(stderr, " -%c %s\t\t   " "%s\n",
         option->char_name,
-        option->arg_name ? option->arg_name : "\t",
+        option->arg_name ? option->arg_name : "    ",
         option->usage_description);
   }
   fprintf(stderr, "\n");

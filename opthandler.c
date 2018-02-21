@@ -14,6 +14,8 @@
 
 char * opthandler_argsname = "args";
 
+char opthandler_help_char = 'h';
+
 static size_t options_count;
 static struct opthandler_option * options;
 static char * usage_intro_msg;
@@ -21,7 +23,7 @@ static char * progname;
 
 static struct opthandler_option * getopt_by_char_name (char char_name)
 {
-  if (char_name == 'h')
+  if (char_name == opthandler_help_char)
     opthandler_usage(EXIT_SUCCESS);
   for (size_t i = 0; i < options_count; ++i) {
     if (options[i].char_name == char_name)
@@ -161,7 +163,7 @@ __attribute__((noreturn)) void opthandler_usage (int exit_code)
     progname ? progname : "program",
     opthandler_argsname);
   fprintf(stderr, "%s\n\n", usage_intro_msg);
-  display_option('h', "help", NULL, "display this help");
+  display_option(opthandler_help_char, "help", NULL, "display this help");
   for (size_t i = 0; i < options_count; ++i) {
     struct opthandler_option * option = &options[i];
     display_option(option->char_name, option->long_name, option->arg_name,

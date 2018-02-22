@@ -158,7 +158,6 @@ __attribute__((noreturn)) void opthandler_usage (int exit_code)
 {
   if (!options)
     print_fail("opthandler_usage error: opthandler not initialised.\n");
-  if (exit_code == EXIT_SUCCESS)
   fprintf(stderr, "\nUsage: %s [options] %s\n",
     progname ? progname : "program",
     opthandler_argsname);

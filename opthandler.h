@@ -54,7 +54,7 @@ struct opthandler_option {
  * (argv will then point to the first argument that is not an option)
  * (POSIX-style)
  */
-char * const * opthandler_handle_opts (char * const * argv);
+void opthandler_handle_opts (int * at_argc, char *** at_argv);
 
 
 void opthandler_init (size_t options_count,

@@ -2,37 +2,40 @@
 #include <stdio.h>
 #include "opthandler.h"
 
-enum {
-  verbose,
-  outputfile,
-  no_colors,
+enum options_order {
+  o_OUTPUT_FILE,
+  o_VERBOSE,
+  o_NO_COLORS,
 };
 
 struct opthandler_option options[] = {
-  [verbose] = {"enable verbose output",
+  [o_VERBOSE] = {
+    "enable verbose output",
     'v', "verbose",	NULL,		arg_flag},
-  [outputfile] = {"set the output file",
+  [o_OUTPUT_FILE] = {
+    "set the output file",
     'o', "output-file",	"filename",	arg_default("-")},
-  [no_colors] = {"disable colored output in console",
+  [o_NO_COLORS] = {
+    "disable colored output in console",
     '\0', "no-colors",	NULL,		arg_flag},
 };
 
 #define array_count(a) ( sizeof(a) / sizeof(*(a)) )
 
-int main (int argc, char * const * argv)
+int main (int argc, char * argv[])
 {
   opthandler_init(array_count(options), options, "Example program");
-  argv = opthandler_handle_opts(argv);
-  printf("Remaining args: '");
+  opthandler_handle_opts(&argc, &argv);
+  printf("Remaining %d args: '", argc);
   for (size_t i = 0; argv[i]; ++i)
     printf("%s%s", (i ? " " : ""), argv[i]);
   printf ("'\n"
           "output-file: '%s'\n"
           "verbose = %s\n"
           "colors = %s\n",
-          options[outputfile].value.string,
-          options[verbose].value.flag ? "yes" : "no",
-          options[no_colors].value.flag ? "no" : "yes");
+          options[o_OUTPUT_FILE].value.string,
+          options[o_VERBOSE].value.flag ? "yes" : "no",
+          options[o_NO_COLORS].value.flag ? "no" : "yes");
   opthandler_free();
   return 0;
 }

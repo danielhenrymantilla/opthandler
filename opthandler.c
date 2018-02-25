@@ -21,6 +21,11 @@ static struct opthandler_option * options;
 static char * usage_intro_msg;
 static char * progname;
 
+#define opthandler_fail(fmt, ...) do { \
+  fprintf(stderr, "Error: " fmt ".\n", ##__VA_ARGS__); \
+  opthandler_usage(EXIT_FAILURE); \
+} while (0)
+
 static struct opthandler_option * getopt_by_char_name (char char_name)
 {
   if (char_name == opthandler_help_char)
@@ -29,7 +34,7 @@ static struct opthandler_option * getopt_by_char_name (char char_name)
     if (options[i].char_name == char_name)
       return &options[i];
   }
-  return NULL;
+  opthandler_fail("unrecognised option '-%c'", char_name);
 }
 
 static struct opthandler_option * getopt_by_long_name (char * long_name)
@@ -42,71 +47,67 @@ static struct opthandler_option * getopt_by_long_name (char * long_name)
     if (option_name && strcmp(option_name, long_name) == 0)
       return &options[i];
   }
-  return NULL;
+  opthandler_fail("unrecognised option '--%s'", long_name);
 }
 
-#define opthandler_fail(fmt, ...) do { \
-  fprintf(stderr, "Error: " fmt ".\n", ##__VA_ARGS__); \
-  opthandler_usage(EXIT_FAILURE); \
-} while (0)
-
-char * const * opthandler_handle_opts (char * const * argv)
+void opthandler_handle_opts (int * at_argc, char *** at_argv)
 {
+#define argc (*at_argc)
+#define argv (*at_argv)
   if (!options)
     print_fail("opthandler_handle_opts error: opthandler not initialised.\n");
-  progname = strdup(*(argv++));
+  progname = strdup(*argv);
+  --argc;
   if (!progname) perror("strdup");
-  for (char * arg; (arg = *argv); ++argv) {
-    if (arg[0] != '-')				/* Not an option */
-      return argv;
+  for (char * arg; (arg = *(++argv)); --argc) {
+    if (arg[0] != '-')				/* > Not an option */
+      break;
     struct opthandler_option * option;
-    if (arg[1] != '\0' && arg[2] == '\0') {	/* short (char) name */
+    if (arg[1] != '\0' && arg[2] == '\0') {	/* > short (char) name */
       option = getopt_by_char_name(arg[1]);
-    } else {					/* long name */
-      if (arg[1] != '-')			/* syntax error */
+      if (!option->arg_name) {		/* no arg_name => boolean flag */
+        option->value.flag = 1;
+      } else {				/* argument required => ++argv */
+        if (!(++argv)) {
+          opthandler_fail("missing argument '%s' for option %s",
+                          option->arg_name, arg);
+        }
+        --argc;
+        if (option->value.string) free(option->value.string);
+        /* Use strdup to achieve a persistent/global scope for the args */
+        if (!(option->value.string = strdup(*argv))) perror("strdup");
+      }
+    } else {					/* > long name */
+      if (arg[1] != '-')		/* syntax error */
         opthandler_fail("syntax error at '%s'", arg);
       char * argptr = strchr(&arg[2], '=');
-      if (argptr) {				/* argument provided */
+      if (argptr) {			/* argument provided */
         *argptr = '\0';
         option = getopt_by_long_name(&arg[2]);
-        if (!option)
-          opthandler_fail("unrecognised option '%s'", arg);
-        if (option->arg_name) {			/* handle option's argument */
-          if (option->value.string)
-            free(option->value.string);
-          /* Use strdup to achieve a persistent/global scope for the args */
-          if (!(option->value.string = strdup(argptr + 1)))
-            perror("strdup");
-          continue;
-        } else {				/* argument not required */
-          opthandler_fail("option '%s' does not require an argument (got %s)",
-                          arg, argptr + 1);
-        }
-      } else
+        if (!option->arg_name)		/* yet argument not required */
+          opthandler_fail("extraneous argument '%s' for option '%s'",
+                          argptr + 1, arg);
+        if (option->value.string) free(option->value.string);
+        /* Use strdup to achieve a persistent/global scope for the args */
+        if (!(option->value.string = strdup(argptr + 1)))
+          perror("strdup");
+      } else {				/* argument not provided */
         option = getopt_by_long_name(&arg[2]);
-    }
-    if (!option)
-      opthandler_fail("unrecognised option '%s'", arg);
-    /* option should point to the corresponding option struct */
-    if (!option->arg_name) {		/* no args_name => boolean flag */
-      option->value.flag = 1;
-    } else {				/* argument required => ++argv */
-      if (!(++argv)) {
-        opthandler_fail("missing argument '%s' for option %s",
-                        option->arg_name, arg);
+        if (option->arg_name) {		/* yet argument required */
+          opthandler_fail("please specify a %s for option %s",
+                          option->arg_name, arg);
+        }
+        option->value.flag = 1;
       }
-      if (option->value.string) free(option->value.string);
-      /* Use strdup to achieve a persistent/global scope for the args */
-      if (!(option->value.string = strdup(*argv))) perror("strdup");
     }
-
   }
-  return argv;
+#undef argc
+#undef argv
 }
 
 void opthandler_init (size_t _options_count,
-                     struct opthandler_option * _options,
-                     char * _usage_intro_msg)
+                      struct opthandler_option * _options,
+                      char * _usage_intro_msg)
 {
   if (!_options) print_fail("opthandler_init: error, got NULL options.\n");
   options = _options;

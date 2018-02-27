@@ -1,4 +1,5 @@
 #include "opthandler.h"
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +12,18 @@
   exit(EXIT_FAILURE); \
  } while (0)
 #endif
+
+#warning TODO: Good TOUPPER
+static char * TOUPPER (char * s)
+{
+  char * buf = malloc(strlen(s) + 1);
+  if (!buf) perror("malloc");
+  size_t i;
+  for (i = 0; s[i]; ++i)
+    buf[i] = toupper(s[i]);
+  buf[i] = '\0';
+  return buf;
+}
 
 char * opthandler_argsname = "args";
 
@@ -62,24 +75,32 @@ void opthandler_handle_opts (int * at_argc, char *** at_argv)
   for (char * arg; (arg = *(++argv)); --argc) {
     if (arg[0] != '-')				/* > Not an option */
       break;
+    if (arg[1] == '\0')		/* syntax error: got '-' */
+      opthandler_fail("syntax error at '%s'", arg);
     struct opthandler_option * option;
-    if (arg[1] != '\0' && arg[2] == '\0') {	/* > short (char) name */
+    if (arg[1] != '-') {	/* > short (char) name */
       option = getopt_by_char_name(arg[1]);
       if (!option->arg_name) {		/* no arg_name => boolean flag */
         option->value.flag = 1;
-      } else {				/* argument required => ++argv */
-        if (!(++argv)) {
-          opthandler_fail("missing argument '%s' for option %s",
-                          option->arg_name, arg);
+        if (arg[2] != '\0')
+          opthandler_fail("extraneous argument '%s' for option '-%c'",
+                           &arg[2], arg[1]);
+      } else {				/* argument required */
+        if (option->value.string)
+          free(option->value.string);
+        if (arg[2] == '\0') {			/* arg is next argv */
+          if (!(++argv)) {
+            opthandler_fail("missing argument '%s' for option '%s'",
+                            option->arg_name, arg);
+          }
+          --argc;
+          /* Use strdup to achieve a persistent/global scope for the args */
+          if (!(option->value.string = strdup(*argv))) perror("strdup");
+        } else {				/* arg is adjacent */
+          if (!(option->value.string = strdup(&arg[2]))) perror("strdup");
         }
-        --argc;
-        if (option->value.string) free(option->value.string);
-        /* Use strdup to achieve a persistent/global scope for the args */
-        if (!(option->value.string = strdup(*argv))) perror("strdup");
       }
     } else {					/* > long name */
-      if (arg[1] != '-')		/* syntax error */
-        opthandler_fail("syntax error at '%s'", arg);
       char * argptr = strchr(&arg[2], '=');
       if (argptr) {			/* argument provided */
         *argptr = '\0';
@@ -94,15 +115,15 @@ void opthandler_handle_opts (int * at_argc, char *** at_argv)
       } else {				/* argument not provided */
         option = getopt_by_long_name(&arg[2]);
         if (option->arg_name) {		/* yet argument required */
-          opthandler_fail("please specify a %s for option %s",
+          opthandler_fail("please specify a %s for option '%s'",
                           option->arg_name, arg);
         }
         option->value.flag = 1;
       }
     }
   }
-#undef argc
 #undef argv
+#undef argc
 }
 
 void opthandler_init (size_t _options_count,
@@ -147,10 +168,10 @@ static void display_option (char cn, char * ln, char * an, char * ud)
     n += sprintf(buf + n, "  -%c", cn);
   else
     n += sprintf(buf + n, "    ");
-  n += sprintf(buf + n, "%c ", (cn != '\0' && ln) ? ',' : ' ');
+  n += sprintf(buf + n, "%c", (cn != '\0' && ln) ? ',' : ' ');
   if (ln)
-    n += sprintf(buf + n, "--%s%s", ln, an ? "=" : "");
-  n += sprintf(buf + n, "%s ", an ? an : "");
+    n += sprintf(buf + n, " --%s%s", ln, an ? "=" : "");
+  n += sprintf(buf + n, "%s ", an ? TOUPPER(an) : "");
   fprintf(stderr, "%-30s%s\n", buf, ud);
   free(buf);
 }
@@ -162,7 +183,7 @@ __attribute__((noreturn)) void opthandler_usage (int exit_code)
   fprintf(stderr, "\nUsage: %s [options] %s\n",
     progname ? progname : "program",
     opthandler_argsname);
-  fprintf(stderr, "%s\n\n", usage_intro_msg);
+  fprintf(stderr, "%s\nOptions\n", usage_intro_msg);
   display_option(opthandler_help_char, "help", NULL, "display this help");
   for (size_t i = 0; i < options_count; ++i) {
     struct opthandler_option * option = &options[i];

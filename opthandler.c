@@ -13,8 +13,7 @@
  } while (0)
 #endif
 
-#warning TODO: Good TOUPPER
-static char * TOUPPER (char * s)
+static char * strdup_toupper (char * s)
 {
   char * buf = malloc(strlen(s) + 1);
   if (!buf) perror("malloc");
@@ -171,8 +170,15 @@ static void display_option (char cn, char * ln, char * an, char * ud)
   n += sprintf(buf + n, "%c", (cn != '\0' && ln) ? ',' : ' ');
   if (ln)
     n += sprintf(buf + n, " --%s%s", ln, an ? "=" : "");
-  n += sprintf(buf + n, "%s ", an ? TOUPPER(an) : "");
-  fprintf(stderr, "%-30s%s\n", buf, ud);
+  if (an) {
+    char * an_upper = strdup_toupper(an);
+    n += sprintf(buf + n, "%s", an_upper);
+    free(an_upper);
+  }
+  if (n < 30)
+    fprintf(stderr, "%-30s%s\n", buf, ud);
+  else
+    fprintf(stderr, "%s\n%-30s%s\n", buf, "", ud);
   free(buf);
 }
 
@@ -183,7 +189,7 @@ __attribute__((noreturn)) void opthandler_usage (int exit_code)
   fprintf(stderr, "\nUsage: %s [options] %s\n",
     progname ? progname : "program",
     opthandler_argsname);
-  fprintf(stderr, "%s\nOptions\n", usage_intro_msg);
+  fprintf(stderr, "%s\nOptions:\n", usage_intro_msg);
   display_option(opthandler_help_char, "help", NULL, "display this help");
   for (size_t i = 0; i < options_count; ++i) {
     struct opthandler_option * option = &options[i];

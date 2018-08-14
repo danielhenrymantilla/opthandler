@@ -94,7 +94,7 @@ void opthandler_handle_opts (int * at_argc, char *** at_argv)
         if (option->value.string)
           free(option->value.string);
         if (arg[2] == '\0') {			/* arg is next argv */
-          if (!(++argv)) {
+          if (!*(++argv)) {
             opthandler_fail("missing argument '%s' for option '%s'",
                             option->arg_name, arg);
           }

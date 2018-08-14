@@ -13,10 +13,16 @@
  } while (0)
 #endif
 
+#define perror_fatal(s) do { \
+  perror(s); \
+  exit(EXIT_FAILURE); \
+} while (0)
+
+
 static char * strdup_toupper (char * s)
 {
   char * buf = malloc(strlen(s) + 1);
-  if (!buf) perror("malloc");
+  if (!buf) perror_fatal("malloc");
   size_t i;
   for (i = 0; s[i]; ++i)
     buf[i] = toupper(s[i]);
@@ -70,7 +76,7 @@ void opthandler_handle_opts (int * at_argc, char *** at_argv)
     print_fail("opthandler_handle_opts error: opthandler not initialised.\n");
   progname = strdup(*argv);
   --argc;
-  if (!progname) perror("strdup");
+  if (!progname) perror_fatal("strdup");
   for (char * arg; (arg = *(++argv)); --argc) {
     if (arg[0] != '-')				/* > Not an option */
       break;
@@ -94,9 +100,9 @@ void opthandler_handle_opts (int * at_argc, char *** at_argv)
           }
           --argc;
           /* Use strdup to achieve a persistent/global scope for the args */
-          if (!(option->value.string = strdup(*argv))) perror("strdup");
+          if (!(option->value.string = strdup(*argv))) perror_fatal("strdup");
         } else {				/* arg is adjacent */
-          if (!(option->value.string = strdup(&arg[2]))) perror("strdup");
+          if (!(option->value.string = strdup(&arg[2]))) perror_fatal("strdup");
         }
       }
     } else {					/* > long name */
@@ -107,10 +113,11 @@ void opthandler_handle_opts (int * at_argc, char *** at_argv)
         if (!option->arg_name)		/* yet argument not required */
           opthandler_fail("extraneous argument '%s' for option '%s'",
                           argptr + 1, arg);
+        *argptr = '='; /* Put back the '=' sign to leave argv args untouched */
         if (option->value.string) free(option->value.string);
         /* Use strdup to achieve a persistent/global scope for the args */
         if (!(option->value.string = strdup(argptr + 1)))
-          perror("strdup");
+          perror_fatal("strdup");
       } else {				/* argument not provided */
         option = getopt_by_long_name(&arg[2]);
         if (option->arg_name) {		/* yet argument required */
@@ -141,7 +148,7 @@ void opthandler_init (size_t _options_count,
         "opthandler_init: warning, got non 0 starting flag.\n");
     } else if (option->value.string) {
       option->value.string = strdup(option->value.string);
-      if (!option->value.string) perror("strdup");
+      if (!option->value.string) perror_fatal("strdup");
     }
   }
 }
@@ -161,7 +168,7 @@ void opthandler_free (void)
 static void display_option (char cn, char * ln, char * an, char * ud)
 {
   char * buf = malloc(20 + (ln ? strlen(ln) : 0) + (an ? strlen(an) : 0));
-  if (!buf) perror("malloc");
+  if (!buf) perror_fatal("malloc");
   size_t n = 0;
   if (cn != '\0')
     n += sprintf(buf + n, "  -%c", cn);
